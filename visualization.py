@@ -41,7 +41,7 @@ def dibujar_arbol_ejemplo(estado_inicial, profundidad_maxima=2):
 def dibujar_ruta_puzzle(ruta_tableros, movimientos):
     """
     Dibuja la secuencia de tableros desde el inicio hasta la meta usando Matplotlib.
-    Estilo de rompecabezas moderno, futurista y dark-mode.
+    Estilo de rompecabezas moderno, premium y claro (ui-ux-pro-max).
     """
     n = len(ruta_tableros)
     
@@ -56,12 +56,21 @@ def dibujar_ruta_puzzle(ruta_tableros, movimientos):
     else:
         axes = axes.flatten()
         
-    # Paleta de colores alineada al design system Light Mode
-    color_marco = '#f1f5f9'           # Slate 100 — marco exterior
-    color_hueco = '#e2e8f0'           # Slate 200 — fondo interno
-    color_ficha = '#2563eb'           # Blue 600 — color principal fichas
-    color_ficha_highlight = '#3b82f6' # Blue 500 — borde
-    color_texto = '#ffffff'           # Blanco — números sobre ficha
+    color_marco = '#ffffff'
+    color_hueco = '#f8fafc'
+    color_texto = '#ffffff'
+    
+    # Matching the exact colors from app.py interactive puzzle
+    color_map = {
+        1: ('#ef4444', '#dc2626'), # Red
+        2: ('#f97316', '#ea580c'), # Orange
+        3: ('#f59e0b', '#d97706'), # Amber
+        4: ('#10b981', '#059669'), # Emerald
+        5: ('#06b6d4', '#0891b2'), # Cyan
+        6: ('#3b82f6', '#2563eb'), # Blue
+        7: ('#8b5cf6', '#7c3aed'), # Violet
+        8: ('#d946ef', '#c026d3'), # Fuchsia
+    }
     
     for i, ax in enumerate(axes):
         if i < n:
@@ -73,19 +82,18 @@ def dibujar_ruta_puzzle(ruta_tableros, movimientos):
             ax.set_aspect('equal')
             ax.axis('off')
             
-            # Marco exterior redondeado estilo glassmorphism
+            # Marco exterior
             marco = FancyBboxPatch((-0.2, -0.2), 3.4, 3.4,
-                                   boxstyle="round,pad=0,rounding_size=0.25",
-                                   ec="#cbd5e1", fc=color_marco, lw=1, zorder=0)
+                                   boxstyle="round,pad=0,rounding_size=0.3",
+                                   ec="#e2e8f0", fc=color_marco, lw=1, zorder=0)
             ax.add_patch(marco)
             
-            # Hueco del puzzle
+            # Hueco
             fondo_interno = FancyBboxPatch((0, 0), 3, 3,
-                                           boxstyle="round,pad=0,rounding_size=0.15",
+                                           boxstyle="round,pad=0,rounding_size=0.2",
                                            ec="none", fc=color_hueco, zorder=1)
             ax.add_patch(fondo_interno)
             
-            # --- Calcular dirección de la flecha para el hueco ---
             flecha = None
             if i > 0:
                 tablero_prev = ruta_tableros[i - 1]
@@ -93,66 +101,61 @@ def dibujar_ruta_puzzle(ruta_tableros, movimientos):
                 idx_hueco_curr = tablero.index(0)
                 fila_prev, col_prev = divmod(idx_hueco_prev, 3)
                 fila_curr, col_curr = divmod(idx_hueco_curr, 3)
-                # La ficha se movió desde hueco_curr hacia hueco_prev
-                # La flecha apunta hacia donde fue la ficha (desde el centro del hueco)
                 df = fila_prev - fila_curr
                 dc = col_prev - col_curr
                 flecha = (fila_curr, col_curr, df, dc)
 
-            # Fichas del puzzle
             for (fila, col), val in np.ndenumerate(matriz):
                 if val != 0:
-                    # Sombra suave (neon glow)
+                    bg_color, border_color = color_map.get(val, ('#94a3b8', '#64748b'))
+                    
+                    # Sombra
                     sombra = FancyBboxPatch((col + 0.05, fila + 0.05), 0.9, 0.9,
                                             boxstyle="round,pad=0,rounding_size=0.15",
-                                            ec="none", fc='#1d4ed8', alpha=0.4, zorder=2)
+                                            ec="none", fc=bg_color, alpha=0.2, zorder=2)
                     ax.add_patch(sombra)
                     
-                    # Ficha vibrante
+                    # Ficha
                     ficha = FancyBboxPatch((col + 0.05, fila + 0.05), 0.9, 0.9,
                                            boxstyle="round,pad=0,rounding_size=0.15",
-                                           ec=color_ficha_highlight, fc=color_ficha, lw=1.5, zorder=3)
+                                           ec=border_color, fc=bg_color, lw=1.5, zorder=3)
                     ax.add_patch(ficha)
                     
-                    # Reflejo superior (para dar efecto glass/glossy)
-                    reflejo = FancyBboxPatch((col + 0.08, fila + 0.08), 0.84, 0.4,
+                    # Reflejo
+                    reflejo = FancyBboxPatch((col + 0.08, fila + 0.08), 0.84, 0.35,
                                            boxstyle="round,pad=0,rounding_size=0.1",
                                            ec="none", fc='#ffffff', alpha=0.15, zorder=4)
                     ax.add_patch(reflejo)
                     
-                    # Número de la ficha
+                    # Número
                     ax.text(col + 0.5, fila + 0.5, str(val),
                             ha='center', va='center',
                             fontsize=24, fontweight='bold', color=color_texto,
                             fontfamily='monospace', zorder=5)
 
-            # --- Dibujar flecha ámbar en el hueco vacío ---
             if flecha is not None:
                 fila_h, col_h, df, dc = flecha
                 cx = col_h + 0.5
                 cy = fila_h + 0.5
                 mag = 0.28
-                # El eje Y de matplotlib está invertido (ylim va de 3.2 a -0.2)
-                # por eso dy usa df directamente (fila crece hacia abajo en ambos)
                 dx = dc * mag
                 dy = df * mag
                 ax.annotate(
                     "",
-                    xy=(cx + dx, cy + dy),      # punta: hacia donde fue la ficha
-                    xytext=(cx - dx, cy - dy),  # cola
+                    xy=(cx + dx, cy + dy),
+                    xytext=(cx - dx, cy - dy),
                     arrowprops=dict(
                         arrowstyle="->,head_width=0.4,head_length=0.3",
-                        color="#f59e0b",
+                        color="#94a3b8", # Color neutral para la flecha
                         lw=2.5,
                     ),
                     zorder=6
                 )
 
-            # Título de la acción
             if i == 0:
-                ax.set_title("Estado Inicial", pad=12, fontweight='bold', fontsize=12, color="#1e293b", fontfamily='monospace')
+                ax.set_title("Estado Inicial", pad=12, fontweight='bold', fontsize=12, color="#0f172a", fontfamily='sans-serif')
             else:
-                ax.set_title(f"Paso {i}: {movimientos[i-1]}", pad=12, fontsize=10, color="#475569", fontweight='semibold', fontfamily='sans-serif')
+                ax.set_title(f"Paso {i}: {movimientos[i-1]}", pad=12, fontsize=11, color="#475569", fontweight='semibold', fontfamily='sans-serif')
         else:
             ax.axis('off')
 

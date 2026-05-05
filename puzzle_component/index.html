@@ -3,212 +3,108 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Puzzle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { transition-duration: 0.01ms !important; }
-        }
         body {
-            font-family: 'Fira Sans', sans-serif;
-            color: #e2e8f0; background: transparent;
+            font-family: 'Inter', sans-serif;
+            background: transparent;
             margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
         }
-        .container {
-            display: flex; gap: 40px;
-            justify-content: center; align-items: flex-start; flex-wrap: wrap;
-        }
-        .board-container, .loose-tiles-container { text-align: center; }
-        .section-label {
-            font-family: 'Fira Code', monospace;
-            font-size: 0.75rem; font-weight: 600;
-            letter-spacing: 1.2px; text-transform: uppercase;
-            color: #64748b; margin-bottom: 12px;
-        }
-        .board {
-            display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 14px; border-radius: 16px;
-            width: fit-content;
-            box-shadow: 0 0 0 1px rgba(148,163,184,0.12), 0 16px 32px rgba(0,0,0,0.6);
-            margin: 0 auto;
+        .grid {
+            display: grid; grid-template-columns: repeat(3, 84px); gap: 12px;
+            background: #ffffff; padding: 20px; border-radius: 20px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+            border: 1px solid #e2e8f0;
         }
         .cell {
-            width: 80px; height: 80px;
-            background: rgba(30, 41, 59, 0.6);
-            border-radius: 12px;
+            width: 84px; height: 84px;
+            border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
-            border: 1px dashed rgba(148, 163, 184, 0.25);
-            transition: border-color 0.15s ease, background 0.15s ease;
-        }
-        .cell.drag-over {
-            border-color: rgba(96, 165, 250, 0.6);
-            background: rgba(59, 130, 246, 0.08);
-        }
-        .tile {
-            width: 76px; height: 76px;
-            background: linear-gradient(145deg, #1d4ed8, #2563eb);
-            color: #f0f9ff; border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-family: 'Fira Code', monospace;
-            font-size: 28px; font-weight: 700;
-            cursor: grab;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(96,165,250,0.3);
+            font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
-            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+            box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
         }
-        .tile:hover  { transform: scale(1.04); box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 14px rgba(96,165,250,0.25); }
-        .tile:active { cursor: grabbing; transform: scale(0.95); opacity: 0.8; }
-        .empty-tile {
-            background: rgba(30,41,59,0.5);
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
-            border: 1px solid rgba(148,163,184,0.15);
-            color: #475569; font-size: 20px;
+        .cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
-        .loose-tiles-container { text-align: center; }
-        .loose-tiles {
-            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-            width: 280px;
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid rgba(148,163,184,0.10);
-            padding: 14px; border-radius: 16px;
-            min-height: 270px;
-            align-content: flex-start; margin: 0 auto;
+        .cell:active { transform: scale(0.96); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .cell.empty {
+            background: #f8fafc; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); color: transparent; cursor: default; border: 1px solid #e2e8f0;
         }
-        .btn {
-            font-family: 'Fira Sans', sans-serif;
-            font-weight: 600; font-size: 0.875rem;
-            background: #3b82f6; color: #f0f9ff;
-            border: none; padding: 11px 24px;
-            border-radius: 10px; cursor: pointer;
-            margin-top: 18px; display: none;
-            transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-            box-shadow: 0 4px 12px rgba(59,130,246,0.35);
-        }
-        .btn:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59,130,246,0.45); }
-        .btn:active { transform: translateY(0); }
-        .btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+        .cell.empty:hover { transform: none; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); }
+        
+        /* Premium Distinct colors for each tile with gradients and text-shadow */
+        .tile-1 { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: 1px solid #b91c1c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-2 { background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: 1px solid #c2410c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-3 { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: 1px solid #b45309; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-4 { background: linear-gradient(135deg, #10b981, #059669); color: white; border: 1px solid #047857; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-5 { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: 1px solid #0e7490; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-6 { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: 1px solid #1d4ed8; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-7 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: 1px solid #6d28d9; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-8 { background: linear-gradient(135deg, #d946ef, #c026d3); color: white; border: 1px solid #a21caf; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="board-container">
-            <p class="section-label">Tablero</p>
-            <div class="board" id="board" role="grid" aria-label="Tablero 8-Puzzle">
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 1"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 2"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 3"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 4"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 5"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 6"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 7"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 8"></div>
-                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 9"></div>
-            </div>
-        </div>
-        <div class="loose-tiles-container">
-            <p class="section-label">Fichas disponibles</p>
-            <div class="loose-tiles" id="loose" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="list" aria-label="Fichas sin colocar">
-            </div>
-            <button id="submitBtn" class="btn" onclick="submitBoard()" aria-label="Guardar configuración del tablero">Guardar Rompecabezas</button>
-        </div>
-    </div>
+    <div class="grid" id="main-board"></div>
 
     <script>
-        function allowDrop(ev) {
-            ev.preventDefault();
-            var cell = ev.currentTarget;
-            if (cell.classList.contains('cell') || cell.classList.contains('loose-tiles')) {
-                cell.classList.add('drag-over');
+        let currentBoard = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+        let currentResetKey = -1;
+
+        function renderBoard() {
+            const boardEl = document.getElementById('main-board');
+            boardEl.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const val = currentBoard[i];
+                const cell = document.createElement('div');
+                cell.innerText = val === 0 ? '' : val;
+                cell.className = 'cell ' + (val === 0 ? 'empty' : 'tile-' + val);
+                cell.onclick = () => handleTileClick(i);
+                boardEl.appendChild(cell);
             }
         }
-        function dragLeave(ev) {
-            ev.currentTarget.classList.remove('drag-over');
-        }
-        function drag(ev) {
-            ev.dataTransfer.setData("text", ev.target.id);
-            ev.target.setAttribute('aria-grabbed', 'true');
-        }
-        function drop(ev) {
-            ev.preventDefault();
-            ev.currentTarget.classList.remove('drag-over');
-            var data = ev.dataTransfer.getData("text");
-            document.getElementById(data).removeAttribute('aria-grabbed');
-            var target = ev.target;
 
-            // Drop on cell
-            if (target.className.includes("cell")) {
-                if (target.children.length === 0) {
-                    target.appendChild(document.getElementById(data));
-                } else {
-                    var existingTile = target.children[0];
-                    var source = document.getElementById(data).parentNode;
-                    target.appendChild(document.getElementById(data));
-                    source.appendChild(existingTile);
+        function handleTileClick(index) {
+            const emptyIndex = currentBoard.indexOf(0);
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const emptyRow = Math.floor(emptyIndex / 3);
+            const emptyCol = emptyIndex % 3;
+
+            const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) || 
+                               (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+            
+            if (isAdjacent) {
+                const temp = currentBoard[index];
+                currentBoard[index] = currentBoard[emptyIndex];
+                currentBoard[emptyIndex] = temp;
+                renderBoard();
+                window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setComponentValue", value: currentBoard }, "*");
+            }
+        }
+
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "streamlit:render") {
+                const args = event.data.args;
+                if (args && args.board && args.reset_key !== currentResetKey) {
+                    currentResetKey = args.reset_key;
+                    currentBoard = args.board;
+                    renderBoard();
                 }
             }
-            // Drop on tile inside cell (swap)
-            else if (target.className.includes("tile") && target.parentNode.className.includes("cell")) {
-                var cell = target.parentNode;
-                var source = document.getElementById(data).parentNode;
-                cell.appendChild(document.getElementById(data));
-                source.appendChild(target);
-            }
-            // Drop back to loose area
-            else if (target.className.includes("loose-tiles") || target.parentNode.className.includes("loose-tiles")) {
-                var dropZone = target.className.includes("loose-tiles") ? target : target.parentNode;
-                dropZone.appendChild(document.getElementById(data));
-            }
-            checkComplete();
-        }
+        });
 
-        const loose = document.getElementById('loose');
-        for (let i = 0; i <= 8; i++) {
-            let tile = document.createElement('div');
-            tile.className = 'tile';
-            if(i === 0) tile.className += ' empty-tile';
-            tile.id = 'tile_' + i;
-            tile.draggable = true;
-            tile.ondragstart = drag;
-            tile.innerText = i === 0 ? "" : i;
-            loose.appendChild(tile);
-        }
+        renderBoard();
 
-        function checkComplete() {
-            const board = document.getElementById('board');
-            let isFull = true;
-            for(let cell of board.children) {
-                if(cell.children.length === 0) isFull = false;
-            }
-            document.getElementById('submitBtn').style.display = isFull ? 'inline-block' : 'none';
-        }
-
-        function sendMessageToStreamlitClient(type, data) {
-            var outData = Object.assign({
-                isStreamlitMessage: true,
-                type: type,
-            }, data);
-            window.parent.postMessage(outData, "*");
-        }
-
-        // Informar a Streamlit que el componente está listo para comunicarse
-        sendMessageToStreamlitClient("streamlit:componentReady", {apiVersion: 1});
-
-        function submitBoard() {
-            const board = document.getElementById('board');
-            let result = [];
-            for(let cell of board.children) {
-                if(cell.children.length > 0) {
-                    let val = cell.children[0].id.replace('tile_', '');
-                    result.push(parseInt(val));
-                }
-            }
-            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: result});
-        }
-        
         window.addEventListener("load", function() {
-            sendMessageToStreamlitClient("streamlit:setFrameHeight", {height: 480});
+            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
+            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 350 }, "*");
         });
     </script>
 </body>
