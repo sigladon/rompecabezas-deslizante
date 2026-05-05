@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@500;700&family=Fira+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition-duration: 0.01ms !important; }
+        }
+        body {
+            font-family: 'Fira Sans', sans-serif;
+            color: #e2e8f0; background: transparent;
+            margin: 0; padding: 20px;
+        }
+        .container {
+            display: flex; gap: 40px;
+            justify-content: center; align-items: flex-start; flex-wrap: wrap;
+        }
+        .board-container, .loose-tiles-container { text-align: center; }
+        .section-label {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem; font-weight: 600;
+            letter-spacing: 1.2px; text-transform: uppercase;
+            color: #64748b; margin-bottom: 12px;
+        }
+        .board {
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.9);
+            padding: 14px; border-radius: 16px;
+            width: fit-content;
+            box-shadow: 0 0 0 1px rgba(148,163,184,0.12), 0 16px 32px rgba(0,0,0,0.6);
+            margin: 0 auto;
+        }
+        .cell {
+            width: 80px; height: 80px;
+            background: rgba(30, 41, 59, 0.6);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px dashed rgba(148, 163, 184, 0.25);
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+        .cell.drag-over {
+            border-color: rgba(96, 165, 250, 0.6);
+            background: rgba(59, 130, 246, 0.08);
+        }
+        .tile {
+            width: 76px; height: 76px;
+            background: linear-gradient(145deg, #1d4ed8, #2563eb);
+            color: #f0f9ff; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 28px; font-weight: 700;
+            cursor: grab;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(96,165,250,0.3);
+            user-select: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+        }
+        .tile:hover  { transform: scale(1.04); box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 14px rgba(96,165,250,0.25); }
+        .tile:active { cursor: grabbing; transform: scale(0.95); opacity: 0.8; }
+        .empty-tile {
+            background: rgba(30,41,59,0.5);
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+            border: 1px solid rgba(148,163,184,0.15);
+            color: #475569; font-size: 20px;
+        }
+        .loose-tiles-container { text-align: center; }
+        .loose-tiles {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+            width: 280px;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(148,163,184,0.10);
+            padding: 14px; border-radius: 16px;
+            min-height: 270px;
+            align-content: flex-start; margin: 0 auto;
+        }
+        .btn {
+            font-family: 'Fira Sans', sans-serif;
+            font-weight: 600; font-size: 0.875rem;
+            background: #3b82f6; color: #f0f9ff;
+            border: none; padding: 11px 24px;
+            border-radius: 10px; cursor: pointer;
+            margin-top: 18px; display: none;
+            transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+        }
+        .btn:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(59,130,246,0.45); }
+        .btn:active { transform: translateY(0); }
+        .btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 2px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="board-container">
+            <p class="section-label">Tablero</p>
+            <div class="board" id="board" role="grid" aria-label="Tablero 8-Puzzle">
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 1"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 2"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 3"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 4"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 5"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 6"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 7"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 8"></div>
+                <div class="cell" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="gridcell" aria-label="Posición 9"></div>
+            </div>
+        </div>
+        <div class="loose-tiles-container">
+            <p class="section-label">Fichas disponibles</p>
+            <div class="loose-tiles" id="loose" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)" role="list" aria-label="Fichas sin colocar">
+            </div>
+            <button id="submitBtn" class="btn" onclick="submitBoard()" aria-label="Guardar configuración del tablero">Guardar Rompecabezas</button>
+        </div>
+    </div>
+
+    <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+            var cell = ev.currentTarget;
+            if (cell.classList.contains('cell') || cell.classList.contains('loose-tiles')) {
+                cell.classList.add('drag-over');
+            }
+        }
+        function dragLeave(ev) {
+            ev.currentTarget.classList.remove('drag-over');
+        }
+        function drag(ev) {
+            ev.dataTransfer.setData("text", ev.target.id);
+            ev.target.setAttribute('aria-grabbed', 'true');
+        }
+        function drop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('drag-over');
+            var data = ev.dataTransfer.getData("text");
+            document.getElementById(data).removeAttribute('aria-grabbed');
+            var target = ev.target;
+
+            // Drop on cell
+            if (target.className.includes("cell")) {
+                if (target.children.length === 0) {
+                    target.appendChild(document.getElementById(data));
+                } else {
+                    var existingTile = target.children[0];
+                    var source = document.getElementById(data).parentNode;
+                    target.appendChild(document.getElementById(data));
+                    source.appendChild(existingTile);
+                }
+            }
+            // Drop on tile inside cell (swap)
+            else if (target.className.includes("tile") && target.parentNode.className.includes("cell")) {
+                var cell = target.parentNode;
+                var source = document.getElementById(data).parentNode;
+                cell.appendChild(document.getElementById(data));
+                source.appendChild(target);
+            }
+            // Drop back to loose area
+            else if (target.className.includes("loose-tiles") || target.parentNode.className.includes("loose-tiles")) {
+                var dropZone = target.className.includes("loose-tiles") ? target : target.parentNode;
+                dropZone.appendChild(document.getElementById(data));
+            }
+            checkComplete();
+        }
+
+        const loose = document.getElementById('loose');
+        for (let i = 0; i <= 8; i++) {
+            let tile = document.createElement('div');
+            tile.className = 'tile';
+            if(i === 0) tile.className += ' empty-tile';
+            tile.id = 'tile_' + i;
+            tile.draggable = true;
+            tile.ondragstart = drag;
+            tile.innerText = i === 0 ? "" : i;
+            loose.appendChild(tile);
+        }
+
+        function checkComplete() {
+            const board = document.getElementById('board');
+            let isFull = true;
+            for(let cell of board.children) {
+                if(cell.children.length === 0) isFull = false;
+            }
+            document.getElementById('submitBtn').style.display = isFull ? 'inline-block' : 'none';
+        }
+
+        function sendMessageToStreamlitClient(type, data) {
+            var outData = Object.assign({
+                isStreamlitMessage: true,
+                type: type,
+            }, data);
+            window.parent.postMessage(outData, "*");
+        }
+
+        // Informar a Streamlit que el componente está listo para comunicarse
+        sendMessageToStreamlitClient("streamlit:componentReady", {apiVersion: 1});
+
+        function submitBoard() {
+            const board = document.getElementById('board');
+            let result = [];
+            for(let cell of board.children) {
+                if(cell.children.length > 0) {
+                    let val = cell.children[0].id.replace('tile_', '');
+                    result.push(parseInt(val));
+                }
+            }
+            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: result});
+        }
+        
+        window.addEventListener("load", function() {
+            sendMessageToStreamlitClient("streamlit:setFrameHeight", {height: 480});
+        });
+    </script>
+</body>
+</html>

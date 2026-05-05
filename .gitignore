@@ -1,0 +1,98 @@
+# ==============================================================
+# Python
+# ==============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Distribución / empaquetado
+.Python
+build/
+dist/
+eggs/
+*.egg-info/
+*.egg
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# Entornos virtuales
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+
+# mypy / type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# ==============================================================
+# Streamlit
+# ==============================================================
+.streamlit/secrets.toml
+
+# ==============================================================
+# Jupyter
+# ==============================================================
+.ipynb_checkpoints/
+*.ipynb
+
+# ==============================================================
+# IDEs y editores
+# ==============================================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains (PyCharm, etc.)
+.idea/
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+\#*\#
+
+# ==============================================================
+# Sistema operativo
+# ==============================================================
+# Linux
+.directory
+.Trash-*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==============================================================
+# Misceláneos del proyecto
+# ==============================================================
+# Logs y resultados temporales
+*.log
+*.tmp
+output/
+results/
