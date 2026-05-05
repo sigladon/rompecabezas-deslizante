@@ -20,7 +20,7 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(3, 84px);
+            grid-template-columns: repeat(4, 70px);
             gap: 10px;
             background: #ffffff;
             padding: 16px;
@@ -30,10 +30,10 @@
             margin: 0 auto;
         }
         .cell {
-            width: 84px; height: 84px;
+            width: 70px; height: 70px;
             border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            font-family: 'JetBrains Mono', monospace; font-size: 33px; font-weight: 700;
+            font-family: 'JetBrains Mono', monospace; font-size: 28px; font-weight: 700;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
@@ -57,13 +57,20 @@
         .tile-6 { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: 1px solid #1d4ed8; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         .tile-7 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: 1px solid #6d28d9; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         .tile-8 { background: linear-gradient(135deg, #d946ef, #c026d3); color: white; border: 1px solid #a21caf; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-9 { background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: 1px solid #be185d; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-10 { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border: 1px solid #3730a3; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-11 { background: linear-gradient(135deg, #14b8a6, #0d9488); color: white; border: 1px solid #0f766e; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-12 { background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; border: 1px solid #9d174d; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-13 { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: 1px solid #b91c1c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-14 { background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: 1px solid #c2410c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .tile-15 { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: 1px solid #b45309; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
         
     </style>
 </head>
 <body>
     <div class="grid" id="main-board"></div>
     <script>
-        const GRID_SIZE = 3;
+        const GRID_SIZE = 4;
         let currentBoard = [];
         let currentResetKey = -1;
         
@@ -110,7 +117,7 @@
         
         window.addEventListener("load", function() {
             window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
-            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 322 }, "*");
+            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 350 }, "*");
         });
     </script>
 </body>

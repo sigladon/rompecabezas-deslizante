@@ -16,10 +16,16 @@ class EstadoPuzzle:
         # El tablero debe ser una tupla para ser "hasheable" en el set de visitados
         pass
 
-def generar_sucesores(tablero):
+def generar_sucesores(tablero, n=3):
+    """Genera sucesores intercambiando el vacío (0) con piezas adyacentes.
+    
+    Args:
+        tablero: Tupla de n*n elementos representando el puzzle
+        n: Tamaño del puzzle (3 para 3x3, 4 para 4x4, 5 para 5x5, etc.)
+    """
     sucesores = []
     vacio = tablero.index(0)
-    fila, col = divmod(vacio, 3)
+    fila, col = divmod(vacio, n)
 
     movimientos = {
         "Arriba": (-1, 0), "Abajo": (1, 0),
@@ -28,8 +34,8 @@ def generar_sucesores(tablero):
 
     for nombre, (df, dc) in movimientos.items():
         n_fila, n_col = fila + df, col + dc
-        if 0 <= n_fila < 3 and 0 <= n_col < 3:
-            nuevo_idx = n_fila * 3 + n_col
+        if 0 <= n_fila < n and 0 <= n_col < n:
+            nuevo_idx = n_fila * n + n_col
             # Crear nuevo tablero (tupla inmutable)
             lista_tablero = list(tablero)
             lista_tablero[vacio], lista_tablero[nuevo_idx] = lista_tablero[nuevo_idx], lista_tablero[vacio]
@@ -37,12 +43,12 @@ def generar_sucesores(tablero):
 
     return sucesores
 
-def es_soluble(tablero):
+def es_soluble(tablero, n=3):
     """
-    Cuenta las inversiones en el tablero.
-    Un 8-puzzle es soluble si el número de inversiones es par.
+    Verifica si un puzzle n×n es soluble.
+    Para n impar: soluble si inversiones es par
+    Para n par: soluble si (inversiones + fila_vacío contando desde abajo) es impar
     """
-    # Convertimos a lista y eliminamos el 0 para contar inversiones
     piezas = [p for p in tablero if p != 0]
     inversiones = 0
     for i in range(len(piezas)):
@@ -50,4 +56,10 @@ def es_soluble(tablero):
             if piezas[i] > piezas[j]:
                 inversiones += 1
 
-    return inversiones % 2 == 0
+    # Para tableros con n par, suma inversiones + fila de vacío
+    if n % 2 == 0:
+        vacio = tablero.index(0)
+        fila_vacio = divmod(vacio, n)[0]
+        return (inversiones + fila_vacio) % 2 == 1
+    else:
+        return inversiones % 2 == 0

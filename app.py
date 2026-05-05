@@ -5,11 +5,9 @@ import random
 import os
 from models import es_soluble
 from algorithms import ejecutar_astar_puzzle, ejecutar_bfs, ejecutar_iddfs
-from visualization import dibujar_ruta_puzzle
-from graphviz import Digraph
 import streamlit.components.v1 as components
 
-st.set_page_config(layout="centered", page_title="8-Puzzle Solver", initial_sidebar_state="collapsed")
+st.set_page_config(layout="centered", page_title="Rompecabezas Deslizante", initial_sidebar_state="collapsed")
 
 # --- UI/UX: Premium Light Mode (SaaS style, ui-ux-pro-max) ---
 st.markdown("""
@@ -28,34 +26,14 @@ html, body, [class*="css"] {
 
 header, #MainMenu, footer { visibility: hidden; }
 
-h1, h2, h3, h4 {
+h1 {
     font-family: 'Inter', sans-serif;
     font-weight: 700;
     color: #0f172a;
     letter-spacing: -0.02em;
-}
-
-h1 {
     font-size: 2.5rem !important;
-    margin-bottom: 0.25rem;
-}
-
-p {
-    color: #475569;
-    line-height: 1.6;
-}
-
-/* ── Container Cards ── */
-[data-testid="stVerticalBlock"] > div.element-container {
-    margin-bottom: 1.25rem;
-}
-
-.card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
 /* ── Buttons ── */
@@ -66,12 +44,12 @@ div[data-testid="stButton"] > button {
     border-radius: 12px !important;
     padding: 0.75rem 1.5rem !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    width: 100% !important;
     background: #ffffff !important;
     color: #0f172a !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
     cursor: pointer !important;
+    white-space: nowrap !important;
 }
 
 div.stButton > button:hover {
@@ -100,445 +78,567 @@ div.stButton > button[kind="primary"]:hover {
     box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3) !important;
 }
 
-/* Segmented Control Styling Alignment */
-div[data-testid="stSegmentedControl"] {
+/* IconButton (Refresh) */
+.icon-btn-container button {
+    width: 60px !important;
+    height: 60px !important;
+    padding: 0 !important;
     display: flex;
+    align-items: center;
     justify-content: center;
-    margin-top: 0.5rem;
+    border-radius: 16px !important;
+    font-size: 1.5rem !important;
 }
 
-/* ── Metrics ── */
-[data-testid="stMetric"] {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.25rem;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
-    transition: box-shadow 0.2s;
-}
 
-[data-testid="stMetric"]:hover {
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -1px rgb(0 0 0 / 0.05);
-}
-
-[data-testid="stMetricLabel"] {
-    font-family: 'Inter', sans-serif;
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.25rem;
-}
-
-[data-testid="stMetricValue"] {
-    font-family: 'JetBrains Mono', monospace;
-    color: #0f172a;
-    font-weight: 700;
-    font-size: 1.875rem;
-    line-height: 1.2;
-}
-
-/* ── Tabs ── */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 2rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.stTabs [data-baseweb="tab"] {
-    font-family: 'Inter', sans-serif;
-    font-weight: 500;
-    color: #64748b;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-    transition: color 0.2s;
-    cursor: pointer;
-}
-
-.stTabs [data-baseweb="tab"]:hover {
-    color: #0f172a;
-}
-
-.stTabs [aria-selected="true"] {
-    color: #2563eb !important;
-    font-weight: 600;
-    border-bottom-color: #2563eb !important;
-    border-bottom-width: 2px !important;
-}
-
-/* Alerts */
-.stAlert {
-    border-radius: 12px !important;
-    border: 1px solid #e2e8f0 !important;
-    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
-    background-color: #ffffff !important;
-}
-.stAlert [data-testid="stMarkdownContainer"] {
-    color: #0f172a !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Funciones de Visualización Actualizadas ──
-def format_estado_html(tablero, is_path=False, tablero_padre=None):
-    color_map = {
-        1: ("#ef4444", "#ffffff"), # Red
-        2: ("#f97316", "#ffffff"), # Orange
-        3: ("#f59e0b", "#ffffff"), # Amber
-        4: ("#10b981", "#ffffff"), # Emerald
-        5: ("#06b6d4", "#ffffff"), # Cyan
-        6: ("#3b82f6", "#ffffff"), # Blue
-        7: ("#8b5cf6", "#ffffff"), # Violet
-        8: ("#d946ef", "#ffffff"), # Fuchsia
-        0: ("#f8fafc", "transparent")
-    }
+def get_puzzle_builder_html(n=3):
+    """Genera HTML interactivo para puzzle n×n dinámicamente."""
+    cell_size = min(84, int(280 / n))  # Ajusta tamaño según n (max 84px)
+    font_size = int(cell_size * 0.4)
+    grid_cols = f"repeat({n}, {cell_size}px)"
     
-    color_bg = "#ffffff" if is_path else "#f8fafc"
-    border_color = "#2563eb" if is_path else "#cbd5e1"
-    border_width = 2 if is_path else 1
+    # Generar estilos de colores para todas las fichas hasta n²
+    tile_styles = ""
+    colors = [
+        "#ef4444, #dc2626", "#f97316, #ea580c", "#f59e0b, #d97706", "#10b981, #059669",
+        "#06b6d4, #0891b2", "#3b82f6, #2563eb", "#8b5cf6, #7c3aed", "#d946ef, #c026d3",
+        "#ec4899, #db2777", "#6366f1, #4f46e5", "#14b8a6, #0d9488", "#f43f5e, #e11d48"
+    ]
     
-    idx_movida = -1
-    idx_origen = -1
-    flecha = ""
+    borders = [
+        "#b91c1c", "#c2410c", "#b45309", "#047857",
+        "#0e7490", "#1d4ed8", "#6d28d9", "#a21caf",
+        "#be185d", "#3730a3", "#0f766e", "#9d174d"
+    ]
     
-    if tablero_padre is not None:
-        idx_movida = tablero_padre.index(0)
-        idx_origen = tablero.index(0)
-        
-        r_origen, c_origen = divmod(idx_origen, 3)
-        r_destino, c_destino = divmod(idx_movida, 3)
-        
-        if r_destino < r_origen: flecha = "↑"
-        elif r_destino > r_origen: flecha = "↓"
-        elif c_destino < c_origen: flecha = "←"
-        elif c_destino > c_origen: flecha = "→"
+    for i in range(1, n * n):
+        color_pair = colors[(i - 1) % len(colors)]
+        border_color = borders[(i - 1) % len(borders)]
+        tile_styles += f".tile-{i} {{ background: linear-gradient(135deg, {color_pair}); color: white; border: 1px solid {border_color}; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }}\n        "
     
-    html = f'<<TABLE BORDER="{border_width}" COLOR="{border_color}" CELLBORDER="1" CELLSPACING="0" CELLPADDING="8" BGCOLOR="{color_bg}">'
-    for i in range(3):
-        html += '<TR>'
-        for j in range(3):
-            idx = i * 3 + j
-            val = tablero[idx]
-            
-            str_val = str(val) if val != 0 else " "
-            if idx == idx_origen and flecha:
-                str_val = flecha
-            
-            bg, fg = color_map.get(val, ("#f8fafc", "#0f172a"))
-            
-            if idx == idx_origen and tablero_padre is not None:
-                bg = "#f1f5f9"
-                fg = "#94a3b8"
-                
-            html += f'<TD BGCOLOR="{bg}" WIDTH="35" HEIGHT="35"><FONT COLOR="{fg}" POINT-SIZE="14" FACE="JetBrains Mono"><B>{str_val}</B></FONT></TD>'
-        html += '</TR>'
-    html += '</TABLE>>'
-    return html
-
-def dibujar_arbol_completo(arbol_expansion, ruta_tableros, movimientos):
-    dot = Digraph(comment='Procedimiento de Solución 8-Puzzle')
-    dot.attr('node', shape='none', margin='0')
-    dot.attr(ordering='out')
-    dot.attr(bgcolor='transparent')
-    dot.attr(pad='0.5')
-    dot.attr(ranksep='0.8')
-    dot.attr(nodesep='0.4')
-    
-    ruta_set = set(ruta_tableros)
-    
-    camino_edges = set()
-    for i in range(len(ruta_tableros)-1):
-        camino_edges.add((ruta_tableros[i], ruta_tableros[i+1]))
-        
-    nodos = set()
-    padre_dict = {}
-    
-    for padre, hijo, mov in arbol_expansion:
-        nodos.add(padre)
-        nodos.add(hijo)
-        if hijo not in padre_dict:
-            padre_dict[hijo] = padre
-            
-    for i in range(1, len(ruta_tableros)):
-        nodos.add(ruta_tableros[i])
-        padre_dict[ruta_tableros[i]] = ruta_tableros[i-1]
-    nodos.add(ruta_tableros[0])
-
-    for estado in nodos:
-        node_id = "N" + "".join(map(str, estado))
-        is_path = estado in ruta_set
-        padre = padre_dict.get(estado)
-        label = format_estado_html(estado, is_path, padre)
-        dot.node(node_id, label)
-            
-    for padre, hijo, mov in arbol_expansion:
-        padre_id = "N" + "".join(map(str, padre))
-        hijo_id = "N" + "".join(map(str, hijo))
-        
-        if (padre, hijo) in camino_edges:
-            dot.edge(padre_id, hijo_id, label=mov, color="#2563eb", penwidth="2.5", fontcolor="#1d4ed8", fontname="Inter", fontsize="11")
-        else:
-            dot.edge(padre_id, hijo_id, label=mov, color="#cbd5e1", style="dashed", penwidth="1", fontcolor="#94a3b8", fontname="Inter", fontsize="10")
-            
-    for i in range(len(ruta_tableros)-1):
-        padre = ruta_tableros[i]
-        hijo = ruta_tableros[i+1]
-        mov = movimientos[i]
-        if (padre, hijo) not in [(p, h) for p, h, m in arbol_expansion]:
-            padre_id = "N" + "".join(map(str, padre))
-            hijo_id = "N" + "".join(map(str, hijo))
-            dot.edge(padre_id, hijo_id, label=mov, color="#2563eb", penwidth="2.5", fontcolor="#1d4ed8", fontname="Inter", fontsize="11")
-            
-    return dot
-
-# ── Custom HTML Component (Sliding Puzzle) ──
-sliding_puzzle_html = """
+    return f"""
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>8-Puzzle</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        body {
+        body {{
             font-family: 'Inter', sans-serif;
             background: transparent;
-            margin: 0; padding: 20px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .grid {
-            display: grid; grid-template-columns: repeat(3, 84px); gap: 12px;
-            background: #ffffff; padding: 20px; border-radius: 20px;
+            margin: 0;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }}
+        .grid {{
+            display: grid;
+            grid-template-columns: {grid_cols};
+            gap: 10px;
+            background: #ffffff;
+            padding: 16px;
+            border-radius: 18px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
             border: 1px solid #e2e8f0;
-        }
-        .cell {
-            width: 84px; height: 84px;
-            border-radius: 14px;
+            margin: 0 auto;
+        }}
+        .cell {{
+            width: {cell_size}px; height: {cell_size}px;
+            border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
-            font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700;
+            font-family: 'JetBrains Mono', monospace; font-size: {font_size}px; font-weight: 700;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
             box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-        }
-        .cell:hover {
+        }}
+        .cell:hover {{
             transform: translateY(-2px);
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-        }
-        .cell:active { transform: scale(0.96); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
-        .cell.empty {
+        }}
+        .cell:active {{ transform: scale(0.96); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }}
+        .cell.empty {{
             background: #f8fafc; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); color: transparent; cursor: default; border: 1px solid #e2e8f0;
-        }
-        .cell.empty:hover { transform: none; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); }
+        }}
+        .cell.empty:hover {{ transform: none; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); }}
         
-        /* Premium Distinct colors for each tile with gradients and text-shadow */
-        .tile-1 { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: 1px solid #b91c1c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-2 { background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: 1px solid #c2410c; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-3 { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: 1px solid #b45309; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-4 { background: linear-gradient(135deg, #10b981, #059669); color: white; border: 1px solid #047857; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-5 { background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: 1px solid #0e7490; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-6 { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: 1px solid #1d4ed8; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-7 { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: 1px solid #6d28d9; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .tile-8 { background: linear-gradient(135deg, #d946ef, #c026d3); color: white; border: 1px solid #a21caf; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        {tile_styles}
     </style>
 </head>
 <body>
     <div class="grid" id="main-board"></div>
-
     <script>
-        let currentBoard = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+        const GRID_SIZE = {n};
+        let currentBoard = [];
         let currentResetKey = -1;
-
-        function renderBoard() {
+        
+        function renderBoard() {{
             const boardEl = document.getElementById('main-board');
             boardEl.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {{
                 const val = currentBoard[i];
                 const cell = document.createElement('div');
                 cell.innerText = val === 0 ? '' : val;
-                cell.className = 'cell ' + (val === 0 ? 'empty' : 'tile-' + val);
+                cell.className = 'cell ' + (val === 0 ? 'empty' : 'tile-' + (val % GRID_SIZE * GRID_SIZE));
                 cell.onclick = () => handleTileClick(i);
                 boardEl.appendChild(cell);
-            }
-        }
-
-        function handleTileClick(index) {
+            }}
+        }}
+        
+        function handleTileClick(index) {{
             const emptyIndex = currentBoard.indexOf(0);
-            const row = Math.floor(index / 3);
-            const col = index % 3;
-            const emptyRow = Math.floor(emptyIndex / 3);
-            const emptyCol = emptyIndex % 3;
-
+            const row = Math.floor(index / GRID_SIZE);
+            const col = index % GRID_SIZE;
+            const emptyRow = Math.floor(emptyIndex / GRID_SIZE);
+            const emptyCol = emptyIndex % GRID_SIZE;
             const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) || 
                                (Math.abs(col - emptyCol) === 1 && row === emptyRow);
-            
-            if (isAdjacent) {
+            if (isAdjacent) {{
                 const temp = currentBoard[index];
                 currentBoard[index] = currentBoard[emptyIndex];
                 currentBoard[emptyIndex] = temp;
                 renderBoard();
-                window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setComponentValue", value: currentBoard }, "*");
-            }
-        }
-
-        window.addEventListener("message", function(event) {
-            if (event.data.type === "streamlit:render") {
+                window.parent.postMessage({{ isStreamlitMessage: true, type: "streamlit:setComponentValue", value: currentBoard }}, "*");
+            }}
+        }}
+        
+        window.addEventListener("message", function(event) {{
+            if (event.data.type === "streamlit:render") {{
                 const args = event.data.args;
-                if (args && args.board && args.reset_key !== currentResetKey) {
+                if (args && args.board && args.reset_key !== currentResetKey) {{
                     currentResetKey = args.reset_key;
-                    currentBoard = args.board;
+                    currentBoard = args.board.slice ? Array.from(args.board) : args.board;
                     renderBoard();
-                }
-            }
-        });
-
-        renderBoard();
-
-        window.addEventListener("load", function() {
-            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
-            window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: 350 }, "*");
-        });
+                }}
+            }}
+        }});
+        
+        window.addEventListener("load", function() {{
+            window.parent.postMessage({{ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }}, "*");
+            window.parent.postMessage({{ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: {cell_size * n + 70} }}, "*");
+        }});
     </script>
 </body>
 </html>
 """
 
-# Inicializar componente de Streamlit
-component_dir = os.path.join(os.path.dirname(__file__), "puzzle_component")
-os.makedirs(component_dir, exist_ok=True)
-with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
-    f.write(sliding_puzzle_html)
+def format_memory(bytes_val):
+    """Convierte bytes a KB, MB o GB de forma legible."""
+    kb = bytes_val / 1024
+    if kb < 1024:
+        return f"{kb:.1f} KB"
+    else:
+        mb = kb / 1024
+        if mb < 1024:
+            return f"{mb:.1f} MB"
+        else:
+            gb = mb / 1024
+            return f"{gb:.2f} GB"
 
-puzzle_builder_component = components.declare_component("puzzle_builder", path=component_dir)
+def get_static_board_html(board, n=3):
+    cells_html = ""
+    # Ajustar tamaño de celda según el número de columnas
+    cell_size = min(90, 360 // n)  # Máximo 90px, mínimo según fit en 360px
+    for val in board:
+        if val == 0:
+            cells_html += f"<div class='cell empty'></div>"
+        else:
+            cells_html += f"<div class='cell tile-{val % 9}'>{val}</div>"
+            
+    return f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+        <style>
+            body {{ background: transparent; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; width: 100%; box-sizing: border-box; }}
+            .grid {{
+                display: grid; grid-template-columns: repeat({n}, {cell_size}px); gap: 8px;
+                background: #ffffff; padding: 12px; border-radius: 16px;
+                box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+                border: 1px solid #e2e8f0;
+            }}
+            .cell {{
+                width: {cell_size}px; height: {cell_size}px;
+                border-radius: 10px;
+                display: flex; align-items: center; justify-content: center;
+                font-family: 'JetBrains Mono', monospace; font-size: {cell_size // 3}px; font-weight: 700;
+                box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
+            }}
+            .cell.empty {{ background: #f8fafc; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); color: transparent; border: 1px solid #e2e8f0; }}
+            .tile-1 {{ background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: 1px solid #b91c1c; }}
+            .tile-2 {{ background: linear-gradient(135deg, #f97316, #ea580c); color: white; border: 1px solid #c2410c; }}
+            .tile-3 {{ background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: 1px solid #b45309; }}
+            .tile-4 {{ background: linear-gradient(135deg, #10b981, #059669); color: white; border: 1px solid #047857; }}
+            .tile-5 {{ background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; border: 1px solid #0e7490; }}
+            .tile-6 {{ background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: 1px solid #1d4ed8; }}
+            .tile-7 {{ background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; border: 1px solid #6d28d9; }}
+            .tile-8 {{ background: linear-gradient(135deg, #d946ef, #c026d3); color: white; border: 1px solid #a21caf; }}
+            .tile-0 {{ background: linear-gradient(135deg, #ec4899, #db2777); color: white; border: 1px solid #be185d; }}
+        </style>
+    </head>
+    <body>
+        <div class="grid">{cells_html}</div>
+    </body>
+    </html>
+    """
+
+# Inicializar componente puzzle
+def get_puzzle_builder_component(n=3):
+    """Crea o reutiliza un componente de puzzle aislado por tamaño.
+
+    Separar el componente por tamaño evita que Streamlit conserve el iframe
+    anterior con el HTML de 3x3 cuando se cambia a 4x4 o 5x5.
+    """
+    component_dir = os.path.join(os.path.dirname(__file__), f"puzzle_component_{n}")
+    os.makedirs(component_dir, exist_ok=True)
+
+    puzzle_html = get_puzzle_builder_html(n)
+    with open(os.path.join(component_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(puzzle_html)
+
+    return components.declare_component(f"puzzle_builder_{n}", path=component_dir)
+
+# Inicializar componente tabla de resultados
+results_dir = os.path.join(os.path.dirname(__file__), "results_component")
+os.makedirs(results_dir, exist_ok=True)
+# Placeholder inicial
+_placeholder_html = "<!DOCTYPE html><html><body style='margin:0'></body></html>"
+if not os.path.exists(os.path.join(results_dir, "index.html")):
+    with open(os.path.join(results_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(_placeholder_html)
+
+results_table_component = components.declare_component("results_table", path=results_dir)
+
+def build_results_table_html(resultados):
+    """Genera el HTML con CSS Grid para la tabla de resultados."""
+    header_row = """
+        <div class='cell hdr'>Algoritmo</div>
+        <div class='cell hdr'>Tiempo</div>
+        <div class='cell hdr'>Memoria</div>
+        <div class='cell hdr nodos'>Nodos<br>explorados</div>
+        <div class='cell hdr'>Pasos</div>
+        <div class='cell hdr'></div>
+    """
+    data_rows = ""
+    for res in resultados:
+        algo_safe = res['algoritmo'].replace("'", "\\'")
+        data_rows += f"""
+        <div class='cell name'>{res['algoritmo']}</div>
+        <div class='cell mono'>{res['tiempo']:.3f}s</div>
+        <div class='cell mono'>{res['memoria']}</div>
+        <div class='cell mono'>{res['nodos']}</div>
+        <div class='cell mono'>{res['pasos']}</div>
+        <div class='cell action'><button class='btn' onclick="selectAlgo('{algo_safe}')">Resolución</button></div>
+        """
+    num_rows = len(resultados)
+    # header ~46px + each row ~53px + small buffer
+    total_h = 46 + num_rows * 53 + 16
+
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; }}
+    body {{
+      font-family: 'Inter', sans-serif;
+      background: transparent;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }}
+    .grid {{
+      display: grid;
+      grid-template-columns: repeat(6, max-content);
+      width: max-content;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+    }}
+    .cell {{
+      padding: 0.7rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      word-break: keep-all;
+      overflow-wrap: normal;
+    }}
+    .grid > .cell:nth-last-child(-n+6) {{
+      border-bottom: none;
+    }}
+    .cell.hdr {{
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: #f8fafc;
+      border-bottom: 2px solid #e2e8f0 !important;
+      white-space: nowrap;
+    }}
+    .cell.nodos {{
+      white-space: normal;
+      text-align: center;
+      line-height: 1.3;
+    }}
+    .cell.name {{
+      font-weight: 600;
+      color: #0f172a;
+      word-break: keep-all;
+    }}
+    .cell.mono {{
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.88rem;
+      color: #334155;
+      white-space: nowrap;
+    }}
+    .cell.action {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }}
+    .btn {{
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 0.35rem 0.8rem;
+      background: #ffffff;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }}
+    .btn:hover {{
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }}
+    .btn:active {{
+      transform: scale(0.97);
+    }}
+  </style>
+</head>
+<body>
+  <div class="grid">
+    {header_row}
+    {data_rows}
+  </div>
+  <script>
+    function selectAlgo(name) {{
+      window.parent.postMessage({{
+        isStreamlitMessage: true,
+        type: "streamlit:setComponentValue",
+        value: name
+      }}, "*");
+    }}
+    window.addEventListener("load", function() {{
+      window.parent.postMessage({{isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1}}, "*");
+      setTimeout(function() {{
+        var h = document.body.scrollHeight;
+        window.parent.postMessage({{isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: h + 8}}, "*");
+      }}, 120);
+    }});
+  </script>
+</body>
+</html>"""
+
 
 # --- CABECERA ---
-st.markdown("""
-<div style="text-align: center; margin-top: 2rem;">
-    <h1>8-Puzzle Solver</h1>
-    <p style="font-size: 1.1rem; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto;">
-        Explora y compara la eficiencia de algoritmos de búsqueda heurística y no informada.
-    </p>
-</div>
-""", unsafe_allow_html=True)
-
+st.markdown("<h1>Rompecabezas Deslizante</h1>", unsafe_allow_html=True)
 # --- ESTADO INICIAL ---
 if 'board' not in st.session_state:
     st.session_state.board = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+if 'board_size' not in st.session_state:
+    st.session_state.board_size = 3
 if 'reset_key' not in st.session_state:
     st.session_state.reset_key = 0
-if 'last_modo' not in st.session_state:
-    st.session_state.last_modo = "Manual"
-if 'resultado' not in st.session_state:
-    st.session_state.resultado = None
+if 'resultados' not in st.session_state:
+    st.session_state.resultados = None
 
-meta = (1, 2, 3, 4, 5, 6, 7, 8, 0)
+# Generar meta según el tamaño
+n = st.session_state.board_size
+meta = tuple(range(1, n*n)) + (0,)
 
-# --- LAYOUT VERTICAL ---
+# --- LAYOUT PRINCIPAL ---
+col_left, col_mid, col_right = st.columns([1, 2, 1])
 
-# 1. Radio Button (Modo)
-st.markdown("<div style='display:flex;justify-content:center;margin-bottom:1rem;'>", unsafe_allow_html=True)
-modo = st.radio("Generación del rompecabezas:", ["Aleatorio", "Manual"], horizontal=True, label_visibility="collapsed")
-st.markdown("</div>", unsafe_allow_html=True)
+with col_mid:
+    # Selector de tamaño
+    st.markdown("<div style='text-align:center; margin-bottom:1.5rem;'>", unsafe_allow_html=True)
+    new_size = st.radio("Tamaño del tablero", [3, 4, 5], horizontal=True, label_visibility="collapsed")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# Lógica de Cambio de Modo
-if modo != st.session_state.last_modo:
-    st.session_state.last_modo = modo
-    st.session_state.reset_key += 1
-    st.session_state.resultado = None # Limpiar resultados anteriores
-    if modo == "Aleatorio":
+    # Componente del puzzle para el tamaño actual
+    puzzle_builder_component = get_puzzle_builder_component(st.session_state.board_size)
+    
+    # Si cambió el tamaño, generar nuevo tablero
+    if new_size != st.session_state.board_size:
+        st.session_state.board_size = new_size
+        st.session_state.reset_key += 1
+        st.session_state.resultados = None
+        
+        # Generar nuevo tablero del tamaño correcto
+        n_squared = new_size * new_size
         while True:
-            nuevo = list(range(9))
+            nuevo = list(range(n_squared))
             random.shuffle(nuevo)
-            if es_soluble(tuple(nuevo)):
+            if es_soluble(tuple(nuevo), new_size):
                 st.session_state.board = tuple(nuevo)
                 break
-    else:
-        st.session_state.board = (1, 2, 3, 4, 5, 6, 7, 8, 0)
-        
-st.markdown("<p style='text-align:center;color:#64748b;font-size:0.875rem;margin-bottom:10px;'>Haz clic en las piezas adyacentes al espacio vacío para moverlas</p>", unsafe_allow_html=True)
+        st.rerun()
+    
+    # Rompecabezas Interactivo
+    board_res = puzzle_builder_component(
+        board=st.session_state.board,
+        reset_key=st.session_state.reset_key,
+        key=f"puzzle_builder_{st.session_state.board_size}"
+    )
+    if board_res and tuple(board_res) != st.session_state.board:
+        st.session_state.board = tuple(board_res)
+        st.session_state.resultados = None # Limpiar si cambia
 
-# 2. Rompecabezas Interactivo
-board_res = puzzle_builder_component(board=st.session_state.board, reset_key=st.session_state.reset_key, key="puzzle_builder")
+    # Botón de recargar centrado bajo el tablero
+    st.markdown("<div style='display:flex; justify-content:center; margin-top:0.5rem;'>", unsafe_allow_html=True)
+    if st.button("Generar nuevo rompecabezas", use_container_width=True):
+        st.session_state.reset_key += 1
+        st.session_state.resultados = None
+        n_squared = st.session_state.board_size ** 2
+        while True:
+            nuevo = list(range(n_squared))
+            random.shuffle(nuevo)
+            if es_soluble(tuple(nuevo), st.session_state.board_size):
+                st.session_state.board = tuple(nuevo)
+                break
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-if board_res and tuple(board_res) != st.session_state.board:
-    st.session_state.board = tuple(board_res)
-    st.session_state.resultado = None # Limpiar resultado si cambia el tablero
-
-# 3. Control Segmentado (Algoritmos)
-st.markdown("<h4 style='text-align:center;margin-top:2rem;font-weight:600;'>Algoritmo de Resolución</h4>", unsafe_allow_html=True)
-
-opciones_algo = ["BFS", "IDDFS", "A* Fuera de Lugar", "A* Manhattan"]
-algoritmo_sel = st.segmented_control("Selecciona el algoritmo", options=opciones_algo, selection_mode="single", label_visibility="collapsed")
-
-# 4. Botón Resolver
-st.markdown("<div style='max-width:400px; margin: 0 auto; margin-top:1.5rem;'>", unsafe_allow_html=True)
+# Botón Resolver
+st.markdown("<div style='max-width:300px; margin: 0 auto; margin-top:2rem;'>", unsafe_allow_html=True)
 if st.button("Resolver", type="primary", use_container_width=True):
-    if not algoritmo_sel:
-        st.warning("Por favor, selecciona un algoritmo del menú anterior.")
-    elif not es_soluble(st.session_state.board):
+    n = st.session_state.board_size
+    if not es_soluble(st.session_state.board, n):
         st.error("El estado actual no es soluble.")
     else:
-        with st.spinner(f"Calculando con {algoritmo_sel}..."):
+        st.session_state.resultados = []
+        # Configuración de algoritmos a ejecutar
+        algoritmos = [
+            ("BFS", ejecutar_bfs, [st.session_state.board, meta, n]),
+            ("IDDFS", ejecutar_iddfs, [st.session_state.board, meta, 30, n]),
+            ("A* Fuera de lugar", ejecutar_astar_puzzle, [st.session_state.board, meta, "fuera_lugar", n]),
+            ("A* Manhattan", ejecutar_astar_puzzle, [st.session_state.board, meta, "manhattan", n])
+        ]
+        
+        progress_text = st.empty()
+        progress_bar = st.progress(0)
+        
+        for idx, (nombre, func, args) in enumerate(algoritmos):
+            progress_text.text(f"Ejecutando {nombre}...")
             tracemalloc.start()
             start_time = time.time()
             
-            if algoritmo_sel == "BFS": res = ejecutar_bfs(st.session_state.board, meta)
-            elif algoritmo_sel == "IDDFS": 
-                res = ejecutar_iddfs(st.session_state.board, meta)
-                if res[0] is not None: res = (res[0], res[1], sum(res[2]), res[3], res[4])
-            elif algoritmo_sel == "A* Fuera de Lugar": res = ejecutar_astar_puzzle(st.session_state.board, meta, "fuera_lugar")
-            elif algoritmo_sel == "A* Manhattan": res = ejecutar_astar_puzzle(st.session_state.board, meta, "manhattan")
+            res = func(*args)
             
             end_time = time.time()
             current, peak = tracemalloc.get_traced_memory()
             tracemalloc.stop()
             
-            if res is not None and res[0] is not None:
-                st.session_state.resultado = {
-                    "algoritmo": algoritmo_sel,
-                    "movs": res[0], "ruta": res[1], "nodos": res[2], "costo": res[3], "arbol": res[4],
+            if res and res[0] is not None:
+                # Normalizar output si es IDDFS que tiene distinto output
+                if nombre == "IDDFS":
+                    movs, tableros, nodos_arr, prof, arbol = res
+                    nodos = sum(nodos_arr) if isinstance(nodos_arr, list) else nodos_arr
+                else:
+                    movs, tableros, nodos, costo, arbol = res
+                    
+                st.session_state.resultados.append({
+                    "algoritmo": nombre,
                     "tiempo": end_time - start_time,
-                    "memoria": peak / 1024
-                }
-            else:
-                st.error("No se encontró solución.")
+                    "memoria": format_memory(peak),
+                    "nodos": nodos,
+                    "pasos": len(movs),
+                    "ruta": tableros
+                })
+            progress_bar.progress((idx + 1) / len(algoritmos))
+            
+        progress_text.empty()
+        progress_bar.empty()
 st.markdown("</div>", unsafe_allow_html=True)
 
-# 5. Resumen y Estadísticas
-st.markdown("<hr style='margin: 3rem 0; border-color: #e2e8f0;'>", unsafe_allow_html=True)
-res = st.session_state.resultado
+# --- RESULTADOS (TABLA MULTIALGORITMO) ---
 
-if not res:
-    st.markdown("""
-    <div style='padding: 4rem 2rem; text-align: center; background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 16px; margin-top: 1rem;'>
-        <h4 style='color: #64748b; font-weight: 500; margin-bottom: 0.5rem;'>Aún no hay resultados</h4>
-        <p style='color: #94a3b8; margin: 0;'>Selecciona un algoritmo y presiona "Resolver" para ver el análisis y la solución.</p>
+@st.dialog("Paso a paso de la resolución")
+def modal_resolucion(ruta, nombre_algo):
+    # Inicializar paso en session_state si no existe o es de otro algoritmo
+    key_paso = f"modal_paso_{nombre_algo}"
+    if key_paso not in st.session_state:
+        st.session_state[key_paso] = 0
+
+    paso = st.session_state[key_paso]
+    total = len(ruta) - 1
+
+    # Cabecera: algoritmo + progreso
+    st.markdown(f"""
+    <div style='text-align:center; margin-bottom:0.75rem;'>
+        <div style='font-family:Inter; color:#64748b; font-size:0.95rem; font-weight:600; margin-bottom:0.25rem;'>{nombre_algo}</div>
+        <div style='font-family:JetBrains Mono,monospace; font-size:0.85rem; color:#94a3b8;'>Paso {paso} de {total}</div>
     </div>
     """, unsafe_allow_html=True)
-else:
-    st.markdown(f"<h3 style='text-align:center; margin-bottom: 2rem;'>Resultados: {res['algoritmo']}</h3>", unsafe_allow_html=True)
-    
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Pasos / Costo", len(res['movs']))
-    m2.metric("Nodos Expandidos", res['nodos'])
-    m3.metric("Tiempo (s)", f"{res['tiempo']:.4f}")
-    m4.metric("Memoria Pico", f"{res['memoria']:.1f} KB")
-    
-    st.markdown("<div style='margin-top: 3rem;'></div>", unsafe_allow_html=True)
-    tab1, tab2 = st.tabs(["Secuencia de Movimientos", "Árbol de Expansión"])
-    
-    with tab1:
-        st.markdown("<p style='font-size:0.875rem;color:#64748b;margin-bottom:1.5rem;'>Representación visual paso a paso desde el estado inicial hasta la meta.</p>", unsafe_allow_html=True)
-        fig = dibujar_ruta_puzzle(res['ruta'], res['movs'])
-        fig.patch.set_alpha(0.0)
-        st.pyplot(fig, transparent=True)
-        
-    with tab2:
-        if res['nodos'] <= 50:
-            st.markdown("<p style='font-size:0.875rem;color:#64748b;margin-bottom:1.5rem;'>El grafo muestra el árbol de búsqueda. El camino azul es la ruta óptima encontrada.</p>", unsafe_allow_html=True)
-            arbol = dibujar_arbol_completo(res['arbol'], res['ruta'], res['movs'])
-            st.graphviz_chart(arbol, use_container_width=True)
-        else:
-            st.info(f"El árbol de expansión tiene **{res['nodos']} nodos**, lo cual es demasiado grande para renderizar interactivamente. Se recomienda un estado más cercano a la meta para visualizar el árbol completo.")
+
+    # Tablero
+    html_board = get_static_board_html(ruta[paso], st.session_state.board_size)
+    st.components.v1.html(html_board, height=290)
+
+    # Botones de navegación
+    col1, col2 = st.columns(2)
+    if col1.button("Anterior", disabled=(paso == 0), use_container_width=True):
+        st.session_state[key_paso] = paso - 1
+        st.rerun()
+    if col2.button("Siguiente", disabled=(paso == total), use_container_width=True):
+        st.session_state[key_paso] = paso + 1
+        st.rerun()
+
+    # Slider para navegación rápida
+    nuevo_paso = st.slider("Desliza para ver los pasos", 0, total, paso, label_visibility="collapsed")
+    if nuevo_paso != paso:
+        st.session_state[key_paso] = nuevo_paso
+        st.rerun()
+
+
+
+
+if st.session_state.resultados is not None:
+    st.markdown("<hr style='margin: 3rem 0; border-top: 1px dashed #cbd5e1;'>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Escribir HTML actualizado al componente
+    results_html = build_results_table_html(st.session_state.resultados)
+    with open(os.path.join(results_dir, "index.html"), "w", encoding="utf-8") as f:
+        f.write(results_html)
+
+    # Renderizar tabla como componente (altura ~ header + filas)
+    num_rows = len(st.session_state.resultados)
+    component_height = 48 + num_rows * 55 + 20
+
+    clicked_algo = results_table_component(
+        key=f"results_table_{len(st.session_state.resultados)}",
+        height=component_height
+    )
+
+    if clicked_algo:
+        for res in st.session_state.resultados:
+            if res['algoritmo'] == clicked_algo:
+                modal_resolucion(res['ruta'], res['algoritmo'])
+                break
+
